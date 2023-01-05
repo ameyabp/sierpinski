@@ -3,22 +3,22 @@ import svgwrite
 import math
 import random
 
-R = 0.1
+R = 1
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--canvas_size', help='Width of the canvas to draw on', type=int, default=1000)
     parser.add_argument('-i', '--num_iterations', help='Number of iterations to run', type=int, default=1000)
-    parser.add_argument('-p1', '--point1', help='First point of the triangle - tuple with coordinates in range (0,1)', type=float, default=None)
-    parser.add_argument('-p2', '--point2', help='Secind point of the triangle - tuple with coordinates in range (0,1)', type=float, default=None)
-    parser.add_argument('-p3', '--point3', help='Third point of the triangle - tuple with coordinates in range (0,1)', type=float, default=None)
+    parser.add_argument('-p1', '--point1', help='First point of the triangle -x & y coordinates in range (0,1)', nargs=2, type=float, default=None)
+    parser.add_argument('-p2', '--point2', help='Secind point of the triangle -x & y coordinates in range (0,1)', nargs=2, type=float, default=None)
+    parser.add_argument('-p3', '--point3', help='Third point of the triangle -x & y coordinates in range (0,1)', nargs=2, type=float, default=None)
 
     args = parser.parse_args()
     canvas_size = (args.canvas_size, args.canvas_size)
     itr = args.num_iterations
-    p1 = args.point1
-    p2 = args.point2
-    p3 = args.point3
+    p1 = tuple(args.point1) if args.point1 else None
+    p2 = tuple(args.point2) if args.point2 else None
+    p3 = tuple(args.point3) if args.point3 else None
 
     dwg = svgwrite.Drawing('sapinski.svg', canvas_size, profile='tiny')
     sapinski = dwg.g(stroke="blue", fill="rgb(90%,90%,100%)", stroke_width=0.25)
@@ -27,7 +27,13 @@ if __name__ == '__main__':
     dwg.defs.add(sapinski)
 
     # add all the points
-    # set base triangle vertices
+    # scale user input vertices
+    if p1 and p2 and p3:
+        p1 = (p1[0] * canvas_size[0], p1[1] * canvas_size[0])
+        p2 = (p2[0] * canvas_size[0], p2[1] * canvas_size[0])
+        p3 = (p3[0] * canvas_size[0], p3[1] * canvas_size[0])
+
+    # set base triangle vertices if not provided by user
     while not p1 or not p2 or not p3:
         x1 = random.random() * canvas_size[0]
         y1 = random.random() * canvas_size[0]
