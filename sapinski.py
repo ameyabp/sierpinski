@@ -1,6 +1,7 @@
 import argparse
 import svgwrite
 import math
+import itertools
 import random
 
 R = 1
@@ -9,57 +10,62 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--canvas_size', help='Width of the canvas to draw on', type=int, default=1000)
     parser.add_argument('-i', '--num_iterations', help='Number of iterations to run', type=int, default=1000)
-    parser.add_argument('-p1', '--point1', help='First point of the triangle -x & y coordinates in range (0,1)', nargs=2, type=float, default=None)
-    parser.add_argument('-p2', '--point2', help='Secind point of the triangle -x & y coordinates in range (0,1)', nargs=2, type=float, default=None)
-    parser.add_argument('-p3', '--point3', help='Third point of the triangle -x & y coordinates in range (0,1)', nargs=2, type=float, default=None)
+    parser.add_argument('-v', '--num_vertices', help='Number of vertices to start with', type=int, default=2)
+    parser.add_argument('-p', '--points', help='x & y coordinates of vertices, in range (0,1)', nargs='+', type=float, default=None)
 
     args = parser.parse_args()
     canvas_size = (args.canvas_size, args.canvas_size)
     itr = args.num_iterations
-    p1 = tuple(args.point1) if args.point1 else None
-    p2 = tuple(args.point2) if args.point2 else None
-    p3 = tuple(args.point3) if args.point3 else None
+    num_vertices = args.num_vertices
 
-    dwg = svgwrite.Drawing('sapinski.svg', canvas_size, profile='tiny')
+    vertices = []
+    if args.points:
+        for i in range(num_vertices):
+            vertices.append((args.points[2*i] * canvas_size[0], args.points[2*i+1] * canvas_size[0]))
+
+    dwg = svgwrite.Drawing('sapinski.svg', canvas_size, profile='full')
     sapinski = dwg.g(stroke="blue", fill="rgb(90%,90%,100%)", stroke_width=0.25)
 
     # add the <g /> element to the <defs /> element of the drawing
     dwg.defs.add(sapinski)
 
     # add all the points
-    # scale user input vertices
-    if p1 and p2 and p3:
-        p1 = (p1[0] * canvas_size[0], p1[1] * canvas_size[0])
-        p2 = (p2[0] * canvas_size[0], p2[1] * canvas_size[0])
-        p3 = (p3[0] * canvas_size[0], p3[1] * canvas_size[0])
+    # set base polygon vertices if not provided by user
+    temp_vertices = []
+    reselect = False
+    while len(vertices) == 0:
+        for i in range(num_vertices):
+            x = random.random() * canvas_size[0]
+            y = random.random() * canvas_size[0]
 
-    # set base triangle vertices if not provided by user
-    while not p1 or not p2 or not p3:
-        x1 = random.random() * canvas_size[0]
-        y1 = random.random() * canvas_size[0]
+            temp_vertices.append((x,y))
         
-        x2 = random.random() * canvas_size[0]
-        y2 = random.random() * canvas_size[0]
-        
-        x3 = random.random() * canvas_size[0]
-        y3 = random.random() * canvas_size[0]
-
         # check if they are collinear
-        if (x1 == x2 == x3) or math.isclose((y2-y1)/(x2-x1), (y3-y2)/(x3-x2)):
-            # choose a different set of 3 points
+        for combo in itertools.combinations(temp_vertices, 3):
+            x1 = combo[0][0]
+            y1 = combo[0][1]
+            x2 = combo[1][0]
+            y2 = combo[1][1]
+            x3 = combo[2][0]
+            y3 = combo[2][1]
+            if (x1 == x2 == x3) or math.isclose((y2-y1)/(x2-x1), (y3-y2)/(x3-x2)):
+                # choose a different set of vertices
+                reselect = True
+                break
+        
+        if reselect:
+            reselect = False
+            temp_vertices.clear()
             continue
 
-        p1 = (x1, y1)
-        p2 = (x2, y2)
-        p3 = (x3, y3)
+        vertices = temp_vertices
 
-    vertices = [p1, p2, p3]
     for p in vertices:
-        sapinski.add(dwg.circle((p[0], p[1]), R))
+        sapinski.add(dwg.circle((p[0], p[1]), 2*R))
 
     # seed the iterations
-    x = (p1[0] + p2[0] + p3[0])/3
-    y = (p1[1] + p2[1] + p3[1])/3
+    x = sum([p[0] for p in vertices])/num_vertices
+    y = sum([p[1] for p in vertices])/num_vertices
     sapinski.add(dwg.circle((x, y), R))
 
     # start the iterations
